@@ -1,0 +1,10 @@
+# Use Alpine Linux as the base image
+FROM alpine:latest
+
+RUN apk add --no-cache curl jq
+WORKDIR /scripts
+COPY local_notify_findings.sh .
+RUN chmod +x local_notify_findings.sh
+
+# Script parameters are passed via "command"
+ENTRYPOINT ["/scripts/local_notify_findings.sh"]

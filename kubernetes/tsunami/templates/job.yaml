@@ -1,0 +1,65 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: tsunami
+spec:
+  schedule: {{ .Values.tsunami.cron_schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+            - name: tsunami
+              image: {{ .Values.tsunami.image }} 
+              command: ["/scripts/tsunami_entrypoint.sh"]
+              {{- if .Values.tsunami.resources }}
+              resources:
+                {{- toYaml .Values.tsunami.resources | nindent 18 }}
+              {{- end }}
+              env:
+              - name: IPS
+                value: {{ .Values.tsunami.ips }}
+              volumeMounts:
+                - name: tsunami-logs
+                  mountPath: /usr/tsunami/logs
+                - name: tsunami-entrypoint-configmap
+                  mountPath: "/scripts/"
+          containers:
+            - name: notifier
+              image: {{ .Values.notifier.image }} 
+              command: ["/scripts/notifier_entrypoint.sh"]
+              {{- if .Values.notifier.resources }}
+              resources:
+                {{- toYaml .Values.notifier.resources | nindent 18 }}
+              {{- end }}
+              env:
+              - name: IPS
+                value: {{ required "IPs required!" .Values.tsunami.ips }}
+              - name: SLACK_CHANNEL
+                valueFrom:
+                  secretKeyRef:
+                    name: slack-secret
+                    key: SLACK_CHANNEL
+              - name: SLACK_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: slack-secret
+                    key: SLACK_TOKEN
+              volumeMounts:
+                - name: notifier-entrypoint-configmap
+                  mountPath: "/scripts/"
+                - name: tsunami-logs
+                  mountPath: /tsunami_logs
+
+          volumes:
+            - name: tsunami-logs
+              emptyDir: {}
+            - name: tsunami-entrypoint-configmap
+              configMap:
+                name: tsunami-entrypoint-configmap
+                defaultMode: 0500
+            - name: notifier-entrypoint-configmap
+              configMap:
+                name: notifier-entrypoint-configmap
+                defaultMode: 0500

@@ -1,0 +1,35 @@
+version: '2'
+services:
+
+  unauthenticated-jupyter-notebook:
+    image: jupyter/base-notebook
+    container_name: unauthenticated-jupyter-notebook
+    ports:
+      - "8888:8888"
+    command: start-notebook.sh --NotebookApp.token=''
+
+  tsunami:
+    build:   
+      context: ../tsunami-security-scanner ## clone https://github.com/google/tsunami-security-scanner.git and set the correct context
+      dockerfile: Dockerfile
+    command: --ip-v4-target=127.0.0.1 --scan-results-local-output-format=JSON --scan-results-local-output-filename=logs/tsunami-output.json
+    volumes:
+      - "tsunami_logs:/usr/tsunami/logs"
+    depends_on:
+      - unauthenticated-jupyter-notebook
+    network_mode: host
+
+
+  notifier:
+    build:
+      context: .
+      dockerfile: local-notifier-dockerfile
+    command: -f /tsunami_logs/tsunami-output.json -t ${SLACK_TOKEN} -c ${SLACK_CHANNEL}
+    volumes:
+      - "tsunami_logs:/tsunami_logs"
+    depends_on:
+      tsunami:
+        condition: service_completed_successfully
+
+volumes:
+  tsunami_logs:

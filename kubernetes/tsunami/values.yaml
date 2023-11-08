@@ -1,0 +1,35 @@
+# -- Configuration for the notifier 
+notifier:
+  # -- Image and tag configuration
+  image: develeapoc/notifier:latest
+  # -- Slack configuration block
+  slack:
+    # -- channel to post results to 
+    channel: channel-placeholder
+    # -- Token place holder, should be stored at a secret store, here for tests only and should not be saved to git / gitops repo.
+    token: token-placeholder
+  # -- resources block
+  resources:
+    limits:
+      memory: 100Mi
+      cpu: "1"
+    requests:
+      memory: 50Mi
+      cpu: "0.2"  
+
+# -- Configuration block for tsunami 
+tsunami:
+  # -- Image and tag configuration
+  image: develeapoc/tsunami:latest
+  # -- configure cron schedule for tsunami cronjob
+  cron_schedule: "1 * * * *"
+  # -- whitespace separated list of IPv4 addresses
+  ips: "127.0.0.1 127.0.0.2 10.99.215.204"
+  # -- resources block
+  resources:
+    limits:
+      memory: 2Gi
+      cpu: "1"
+    requests:
+      memory: 1Gi
+      cpu: "0.2"  

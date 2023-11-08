@@ -1,0 +1,42 @@
+{
+  "scanStatus": "SUCCEEDED",
+  "scanStartTimestamp": "2023-11-05T15:28:54.942Z",
+  "scanDuration": "27.597s",
+  "fullDetectionReports": {
+  },
+  "reconnaissanceReport": {
+    "targetInfo": {
+      "networkEndpoints": [{
+        "type": "IP",
+        "ipAddress": {
+          "addressFamily": "IPV4",
+          "address": "127.0.0.1"
+        }
+      }]
+    },
+    "networkServices": [{
+      "networkEndpoint": {
+        "type": "IP_PORT",
+        "ipAddress": {
+          "addressFamily": "IPV4",
+          "address": "127.0.0.1"
+        },
+        "port": {
+          "portNumber": 631
+        }
+      },
+      "transportProtocol": "TCP",
+      "serviceName": "ipp",
+      "software": {
+        "name": "CUPS"
+      },
+      "versionSet": {
+        "versions": [{
+          "type": "NORMAL",
+          "fullVersionString": "2.4"
+        }]
+      },
+      "cpes": ["cpe:/a:apple:cups:2.4"]
+    }]
+  }
+}

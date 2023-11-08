@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unauthenticated-jupyter-notebook-deployment
+  labels:
+    app: unauthenticated-jupyter-notebook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unauthenticated-jupyter-notebook
+  template:
+    metadata:
+      labels:
+        app: unauthenticated-jupyter-notebook
+    spec:
+      containers:
+      - name: unauthenticated-jupyter-notebook
+        image: jupyter/base-notebook
+        command: ["start-notebook.sh", "--NotebookApp.token=''"] 
+        ports:
+        - containerPort: 8888
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: unauthenticated-jupyter-notebook-service
+spec:
+  type: ClusterIP
+  selector:
+    app: unauthenticated-jupyter-notebook
+  ports:
+    - port: 8888
+      targetPort: 8888

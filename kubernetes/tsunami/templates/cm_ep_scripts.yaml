@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tsunami-entrypoint-configmap
+data:
+  tsunami_entrypoint.sh: |
+    #!/bin/bash
+    ## IPS injested by values file
+    echo "** Starting Scan **"
+    echo "** Scanning IPS: $IPS **"
+    DATE=$(date +"%y%m%d%H%M%S")
+    for IP in $IPS; do
+      java -cp "tsunami.jar:plugins/*" -Dtsunami-config.location=tsunami.yaml com.google.tsunami.main.cli.TsunamiCli \
+              --ip-v4-target="$IP" --scan-results-local-output-format=JSON --scan-results-local-output-filename="/usr/tsunami/logs/tsunami-output-$IP-$DATE.json"
+      echo "** Finished scanning IP: $IP **"
+    done
+
+--- 
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notifier-entrypoint-configmap
+data:
+  notifier_entrypoint.sh: |
+    #!/bin/sh
+
+    while getopts "t:c:" opt; do
+      case $opt in
+        t)
+          SLACK_TOKEN="$OPTARG"
+          ;;
+        c)
+          SLACK_CHANNEL="$OPTARG"
+          ;;
+        \?)
+          echo "Invalid option: -$OPTARG" >&2
+          exit 1
+          ;;
+      esac
+    done
+
+    INIT_MSG=":ocean: *Tsunami found vulnerabilities* :ocean:"
+    OUTPUT=""
+
+    if ! [ -d "/tsunami_logs" ]; then
+      echo "*tsunami logs directory does not exist!*"
+      exit 1
+    fi
+
+    for FILE in /tsunami_logs/*
+    do 
+      if [ -f "$FILE" ]; then
+          echo "Parsing $FILE"
+          if jq -e '.scanFindings' $FILE >/dev/null; then
+              for i in $(jq '.scanFindings | length' $FILE)
+              do  
+                  item=$( jq .scanFindings[$(($i-1))] $FILE)
+                  title=$(echo "$item" | jq .vulnerability.title)
+                  severity=$(echo "$item" | jq .vulnerability.severity)
+                  ip=$(echo "$item" | jq .targetInfo.networkEndpoints[0].ipAddress.address)
+                  port=$(echo "$item" | jq .networkService.networkEndpoint.port.portNumber)
+                  description=$(echo "$item" | jq .vulnerability.description)
+                  OUTPUT="$OUTPUT
+    • *Title*: $title
+        *Severity*: $severity
+        *Ip*: $ip
+        *Port*: $port
+        *Description*: $description"
+              done
+          fi
+
+          if ! [ -d "/tsunami_logs/old" ]; then mkdir /tsunami_logs/old; fi
+          mv $FILE /tsunami_logs/old/ && echo "log $FILE archived"
+
+      fi
+    done
+
+        if [ -z "$OUTPUT" ]; then
+          echo "Scan complete, no vulnerabilities found"
+        else
+        OUTPUT="$INIT_MSG
+      $OUTPUT"
+        curl -s -d "text=$OUTPUT" -d "channel=$SLACK_CHANNEL" \
+        -H "Authorization: Bearer $SLACK_TOKEN" -X POST https://slack.com/api/chat.postMessage > /dev/null \
+        && echo "Slack notification sent" || echo "Slack API call failed!" 
+      fi
